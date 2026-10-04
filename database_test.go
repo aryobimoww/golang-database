@@ -13,7 +13,7 @@ func TestEmpty(t *testing.T) {
 }
 
 
-func TextOpenConnection(t *testing.T) {
+func TestOpenConnection(t *testing.T) {
 	dsn := "root:@tcp(localhost:3306)/belajar_golang_database"
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
