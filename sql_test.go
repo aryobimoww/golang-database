@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
 
@@ -64,7 +65,7 @@ func TestQueryComplex(t *testing.T) {
 		panic(err)
 	}
 	defer rows.Close()
-	fmt.Println("hai")
+	
 	for rows.Next() {
 		var id,name string
 		var email sql.NullString
@@ -122,4 +123,140 @@ func TestSqlInjection(t *testing.T) {
 	}else{
 		fmt.Println("gagal login")
 	}
+}
+
+func TestSqlParameter(t *testing.T) {
+	db := GetConnection()
+	defer db.Close()
+
+	email:= "budi@gmail.com"
+	password := "budi"
+
+	query := "SELECT email from user where email =  ? and password = ?"
+	
+	ctx := context.Background()
+	rows, err := db.QueryContext(ctx , query, email,password)
+
+	if err != nil {
+		panic(err)
+	}
+	defer rows.Close()
+	if rows.Next() {
+		var email string
+		err := rows.Scan(&email)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("sukses login ", email)
+	}else{
+		fmt.Println("gagal login ", email)
+	}
+}
+
+func TestSqlInsertAdmin(t *testing.T) {
+	db := GetConnection()
+	defer db.Close()
+	email := "budi@gmail.com"
+	password := "budi"
+
+	query := "INSERT INTO user(email, password) VALUES(?, ?)"
+	
+	ctx := context.Background()
+	_, err := db.ExecContext(ctx , query, email, password)
+
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Data user berhasil dimasukan")
+	
+}
+
+func TestSqlInsertComment(t *testing.T) {
+	db := GetConnection()
+	defer db.Close()
+	email := "budi@gmail.com"
+	comment := "sangat membantu sekali tutorialnya, terimakasih banyak"
+
+	query := "INSERT INTO comments(email, comment) VALUES(?, ?)"
+	
+	ctx := context.Background()
+	results, err := db.ExecContext(ctx , query, email, comment)
+
+	if err != nil {
+		panic(err)
+	}
+	resultId,err := results.LastInsertId()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Data comment berhasil dimasukan")
+	fmt.Println("Last Insert ID:", resultId)
+}
+
+func TestSqlPrepareStatement(t *testing.T) {
+	db := GetConnection()
+	defer db.Close()
+	
+	query := "INSERT INTO comments(email, comment) VALUES(?, ?)"
+	
+	ctx := context.Background()
+	stmt, err := db.PrepareContext(ctx , query)
+
+	if err != nil {
+		panic(err)
+	}
+	defer stmt.Close()
+
+	for i := 0; i < 10; i++ {
+		email := "budi" + strconv.Itoa(i) + "@gmail.com";
+		comment := "sangat membantu sekali tutorialnya, terimakasih banyak" + strconv.Itoa(i);
+
+		results, err := stmt.ExecContext(ctx , email, comment)
+		if err != nil {
+			panic(err)
+		}
+		resultId,err := results.LastInsertId()
+		if err != nil {
+			panic(err)
+		}	
+		fmt.Println("Data comment berhasil dimasukan")
+		fmt.Println("Comment ID:", resultId)
+	}
+}
+
+func TestSqlTransaction(t *testing.T) {
+	db := GetConnection()
+	defer db.Close()
+
+	query := "INSERT INTO comments(email, comment) VALUES(?, ?)"
+
+	ctx := context.Background()
+	tx, err := db.Begin()
+	if err != nil {
+		panic(err)
+	}	
+	
+for i := 0; i < 10; i++ {
+		email := "budi" + strconv.Itoa(i) + "@gmail.com";
+		comment := "sangat membantu sekali tutorialnya, terimakasih banyak" + strconv.Itoa(i);
+
+		results, err := tx.ExecContext(ctx , query, email, comment)
+		if err != nil {
+			panic(err)
+		}
+		resultId,err := results.LastInsertId()
+		if err != nil {
+			panic(err)
+		}	
+		fmt.Println("Data comment berhasil dimasukan")
+		fmt.Println("Comment ID:", resultId)
+	}
+
+
+	err = tx.Rollback()
+	if err != nil {{
+		tx.Rollback()
+		panic(err)
+	}
+ }
 }
